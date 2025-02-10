@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PiCreditCardBold } from "react-icons/pi";
 import { RiCustomerService2Fill } from "react-icons/ri";
 import { motion, AnimatePresence } from "framer-motion";
 import validateCard from "../algorithm/validateCard";
-import axios from "axios";
 import { IoClose } from "react-icons/io5";
+import { usePayment } from "../context/PaymentHistoryPage";
 
 const PaymentPage: React.FC = () => {
+	const { addPayment } = usePayment();
 	const [phone, setPhone] = useState("");
 	const [cardNumber, setCardNumber] = useState("");
 	const [expiry, setExpiry] = useState("");
@@ -102,11 +103,13 @@ const PaymentPage: React.FC = () => {
 		const currentYear = new Date().getFullYear() % 100;
 		const currentMonth = new Date().getMonth() + 1;
 
-		if (!/^\d{2}\/\d{2}$/.test(expiry) ||
+		if (
+			!/^\d{2}\/\d{2}$/.test(expiry) ||
 			parseInt(month) < 1 ||
 			parseInt(month) > 12 ||
 			parseInt(year) < currentYear ||
-			(parseInt(year) === currentYear && parseInt(month) < currentMonth)) {
+			(parseInt(year) === currentYear && parseInt(month) < currentMonth)
+		) {
 			return "Неверный срок действия карты";
 		}
 
@@ -123,6 +126,7 @@ const PaymentPage: React.FC = () => {
 
 		try {
 			const paymentData = {
+				id: Math.random().toString(36).substr(2, 4),
 				phone,
 				cardNumber: cardNumber.replace(/\s/g, ""),
 				expiry,
@@ -131,21 +135,33 @@ const PaymentPage: React.FC = () => {
 				timestamp: new Date().toISOString()
 			};
 
-			const response = await axios.post("http://localhost:8000/payments", paymentData);
+			addPayment(paymentData);
+			setChatVisible(true);
+			setNewMessage(true);
+			setError("");
 
-			if (response.status === 201) {
-				console.log("Payment saved successfully:", response.data);
-				setChatVisible(true);
-				setNewMessage(true);
-				setError("");
-			} else {
-				throw new Error("Failed to save payment");
-			}
+			setPhone("");
+			setCardNumber("");
+			setExpiry("");
+			setName("");
+			setCardType("unknown");
 		} catch (err) {
 			console.error("Payment error:", err);
 			setError("Ошибка при обработке платежа");
 		}
 	};
+
+	useEffect(() => {
+		setPhone("");
+		setCardNumber("");
+		setExpiry("");
+		setName("");
+		setCardType("unknown");
+		setError("");
+		setChatVisible(false);
+		setNewMessage(false);
+		setChatOpen(false);
+	}, []);
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-violet-700 via-purple-600 to-indigo-800 flex items-center justify-center p-4 md:p-6 lg:p-8">
